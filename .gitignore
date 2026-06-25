@@ -1,0 +1,16 @@
+.vs/
+__pycache__/
+*.pyc
+
+# Generated pack workspaces and exports stay outside the repo by default.
+out/
+work/
+*.log
+
+# Unreal generated/cache folders.
+**/Binaries/
+**/DerivedDataCache/
+**/Intermediate/
+**/Saved/
+**/.vs/
+

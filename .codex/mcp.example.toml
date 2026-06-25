@@ -1,0 +1,18 @@
+# Example Codex MCP configuration for ChiR24/Unreal_mcp.
+# Copy the relevant block to your active Codex config after installing/building the MCP.
+#
+# Source: https://github.com/ChiR24/Unreal_mcp
+# The repository states Unreal Engine 5.0-5.8 support and includes a native
+# McpAutomationBridge plugin plus optional TypeScript bridge.
+
+[mcp_servers.unreal-engine]
+command = "npx"
+args = ["-y", "unreal-engine-mcp-server"]
+tool_timeout_sec = 180
+
+[mcp_servers.unreal-engine.env]
+MCP_AUTOMATION_HOST = "127.0.0.1"
+MCP_AUTOMATION_PORT = "8765"
+# Set per generated project before a run.
+UE_PROJECT_PATH = "C:\\Unreal Engine Projects\\FAB-ASSET-PACKS\\ExamplePack\\ExamplePack.uproject"
+
