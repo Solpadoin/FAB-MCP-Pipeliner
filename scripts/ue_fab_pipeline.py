@@ -137,19 +137,8 @@ def load_demo_map(map_path: str) -> None:
         raise RuntimeError("Failed to load demo map: {0}".format(map_path))
 
 
-def take_high_res_screenshot(project_root: Path) -> Path:
-    output = project_root / "DEMOSHOWCASE.png"
-    if output.exists():
-        output.unlink()
-
-    unreal.SystemLibrary.execute_console_command(None, "HighResShot 1920x1080 filename=\"{0}\"".format(output))
-    unreal.EditorLoadingAndSavingUtils.save_dirty_packages(True, True)
-    return output
-
-
 def run() -> None:
     config = load_config()
-    project_root = Path(config.get("projects_root", r"C:\Unreal Engine Projects\FAB-ASSET-PACKS")) / config["project_name"]
 
     configure_plugins()
     rename_template_pack_folder(config)
@@ -166,8 +155,7 @@ def run() -> None:
     demo_map = config.get("demo_map") or "/Game/{0}/Maps/Demo".format(config["pack_folder"])
     load_demo_map(demo_map)
     unreal.EditorLevelLibrary.save_current_level()
-    screenshot = take_high_res_screenshot(project_root)
-    unreal.log("FAB demo screenshot requested: {0}".format(screenshot))
+    unreal.log("FAB reimport automation complete. Run fab_pipeline.py capture-showcase for DEMOSHOWCASE.png.")
 
 
 run()

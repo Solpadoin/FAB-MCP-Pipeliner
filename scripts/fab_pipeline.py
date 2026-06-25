@@ -4,15 +4,18 @@ import argparse
 import json
 import os
 import shutil
+import subprocess
 import sys
+import time
 import zipfile
 from pathlib import Path
 
 try:
-    from PIL import Image, ImageDraw, ImageFont
+    from PIL import Image, ImageDraw, ImageFilter, ImageFont
 except ImportError:  # pragma: no cover - handled at runtime.
     Image = None
     ImageDraw = None
+    ImageFilter = None
     ImageFont = None
 
 
@@ -174,36 +177,57 @@ def process_showcase(args: argparse.Namespace) -> None:
     input_path = Path(args.input)
     output_path = Path(args.output)
     output_path.parent.mkdir(parents=True, exist_ok=True)
+    skip_text_overlay = bool(getattr(args, "skip_text_overlay", False))
+    if not skip_text_overlay and (not args.title or not args.resolution_label):
+        raise SystemExit("--title and --resolution-label are required unless --skip-text-overlay is used.")
 
     with Image.open(input_path) as source:
         source = source.convert("RGB")
         canvas = Image.new("RGB", TARGET_COVER_SIZE, (18, 18, 18))
-        title_h = 230
-        footer_h = 180
-        image_box = (0, title_h, TARGET_COVER_SIZE[0], TARGET_COVER_SIZE[1] - footer_h)
-        box_w = image_box[2] - image_box[0]
-        box_h = image_box[3] - image_box[1]
+        if skip_text_overlay:
+            bg_scale = max(TARGET_COVER_SIZE[0] / source.width, TARGET_COVER_SIZE[1] / source.height)
+            bg = source.resize((round(source.width * bg_scale), round(source.height * bg_scale)), Image.LANCZOS)
+            bg_left = max(0, (bg.width - TARGET_COVER_SIZE[0]) // 2)
+            bg_top = max(0, (bg.height - TARGET_COVER_SIZE[1]) // 2)
+            bg = bg.crop((bg_left, bg_top, bg_left + TARGET_COVER_SIZE[0], bg_top + TARGET_COVER_SIZE[1]))
+            bg = bg.filter(ImageFilter.GaussianBlur(radius=18))
+            overlay = Image.new("RGB", TARGET_COVER_SIZE, (12, 12, 12))
+            canvas = Image.blend(bg, overlay, 0.22)
 
-        scale = max(box_w / source.width, box_h / source.height)
-        resized = source.resize((round(source.width * scale), round(source.height * scale)), Image.LANCZOS)
-        crop_left = max(0, (resized.width - box_w) // 2)
-        crop_top = max(0, (resized.height - box_h) // 2)
-        cropped = resized.crop((crop_left, crop_top, crop_left + box_w, crop_top + box_h))
-        canvas.paste(cropped, (image_box[0], image_box[1]))
+            fg_scale = min(TARGET_COVER_SIZE[0] / source.width, TARGET_COVER_SIZE[1] / source.height)
+            foreground = source.resize((round(source.width * fg_scale), round(source.height * fg_scale)), Image.LANCZOS)
+            paste_xy = ((TARGET_COVER_SIZE[0] - foreground.width) // 2, (TARGET_COVER_SIZE[1] - foreground.height) // 2)
+            canvas.paste(foreground, paste_xy)
+            image_box = None
+        else:
+            title_h = 230
+            footer_h = 180
+            image_box = (0, title_h, TARGET_COVER_SIZE[0], TARGET_COVER_SIZE[1] - footer_h)
+        if image_box is not None:
+            box_w = image_box[2] - image_box[0]
+            box_h = image_box[3] - image_box[1]
 
-    draw = ImageDraw.Draw(canvas)
-    title_font = load_font(88)
-    footer_font = load_font(58)
-    draw.rectangle((0, 0, TARGET_COVER_SIZE[0], 230), fill=(20, 18, 16))
-    draw.rectangle((0, TARGET_COVER_SIZE[1] - 180, TARGET_COVER_SIZE[0], TARGET_COVER_SIZE[1]), fill=(20, 18, 16))
-    draw_centered(draw, (80, 18, TARGET_COVER_SIZE[0] - 80, 218), args.title, title_font, (246, 238, 220))
-    draw_centered(
-        draw,
-        (80, TARGET_COVER_SIZE[1] - 160, TARGET_COVER_SIZE[0] - 80, TARGET_COVER_SIZE[1] - 20),
-        args.resolution_label,
-        footer_font,
-        (246, 238, 220),
-    )
+            scale = max(box_w / source.width, box_h / source.height)
+            resized = source.resize((round(source.width * scale), round(source.height * scale)), Image.LANCZOS)
+            crop_left = max(0, (resized.width - box_w) // 2)
+            crop_top = max(0, (resized.height - box_h) // 2)
+            cropped = resized.crop((crop_left, crop_top, crop_left + box_w, crop_top + box_h))
+            canvas.paste(cropped, (image_box[0], image_box[1]))
+
+    if not skip_text_overlay:
+        draw = ImageDraw.Draw(canvas)
+        title_font = load_font(88)
+        footer_font = load_font(58)
+        draw.rectangle((0, 0, TARGET_COVER_SIZE[0], 230), fill=(20, 18, 16))
+        draw.rectangle((0, TARGET_COVER_SIZE[1] - 180, TARGET_COVER_SIZE[0], TARGET_COVER_SIZE[1]), fill=(20, 18, 16))
+        draw_centered(draw, (80, 18, TARGET_COVER_SIZE[0] - 80, 218), args.title, title_font, (246, 238, 220))
+        draw_centered(
+            draw,
+            (80, TARGET_COVER_SIZE[1] - 160, TARGET_COVER_SIZE[0] - 80, TARGET_COVER_SIZE[1] - 20),
+            args.resolution_label,
+            footer_font,
+            (246, 238, 220),
+        )
 
     quality = 95
     while True:
@@ -225,7 +249,7 @@ def ue_command(args: argparse.Namespace) -> None:
     ue_root = Path(config.get("ue_root") or DEFAULT_UE_ROOT)
     editor_cmd = ue_root / "Engine" / "Binaries" / "Win64" / "UnrealEditor-Cmd.exe"
     project_file = project_root(config) / f"{config['project_name']}.uproject"
-    script = REPO_ROOT / "scripts" / "ue_fab_pipeline.py"
+    script = (REPO_ROOT / "scripts" / "ue_fab_pipeline.py").as_posix()
     config_path = Path(config["_config_path"]).resolve()
     command = [
         str(editor_cmd),
@@ -238,6 +262,86 @@ def ue_command(args: argparse.Namespace) -> None:
     ]
     rendered = " ".join(f'"{part}"' if " " in part else part for part in command)
     print(f'$env:FAB_CONFIG_PATH="{config_path}"; & {rendered}')
+
+
+def screenshot_command(args: argparse.Namespace) -> None:
+    config = load_config(args.config)
+    ue_root = Path(config.get("ue_root") or DEFAULT_UE_ROOT)
+    editor = ue_root / "Engine" / "Binaries" / "Win64" / "UnrealEditor.exe"
+    project_file = project_root(config) / f"{config['project_name']}.uproject"
+    demo_map = config.get("demo_map") or f"/Game/{config['pack_folder']}/Maps/Demo"
+    screenshot_temp = Path(r"C:\FABPipelineScreenshots") / f"{config['project_name']}_DEMOSHOWCASE.png"
+    command = [
+        str(editor),
+        str(project_file),
+        demo_map,
+        "-nop4",
+        "-nosplash",
+        "-windowed",
+        "-ResX=1920",
+        "-ResY=1080",
+        f"-ExecCmds=HighResShot 1920x1080 filename={screenshot_temp.as_posix()}",
+    ]
+    rendered = " ".join(f'"{part}"' if " " in part else part for part in command)
+    print(f'New-Item -ItemType Directory -Force -Path "{screenshot_temp.parent}" | Out-Null')
+    print(f'Remove-Item -LiteralPath "{screenshot_temp}" -Force -ErrorAction SilentlyContinue')
+    print(f'& {rendered}')
+    print(f'Copy-Item -LiteralPath "{screenshot_temp}" -Destination "{project_root(config) / "DEMOSHOWCASE.png"}" -Force')
+
+
+def capture_showcase(args: argparse.Namespace) -> None:
+    config = load_config(args.config)
+    ue_root = Path(config.get("ue_root") or DEFAULT_UE_ROOT)
+    editor = ue_root / "Engine" / "Binaries" / "Win64" / "UnrealEditor.exe"
+    root = project_root(config)
+    project_file = root / f"{config['project_name']}.uproject"
+    demo_map = config.get("demo_map") or f"/Game/{config['pack_folder']}/Maps/Demo"
+    temp_dir = Path(r"C:\FABPipelineScreenshots")
+    temp_dir.mkdir(parents=True, exist_ok=True)
+    temp_file = temp_dir / f"{config['project_name']}_DEMOSHOWCASE.png"
+    final_file = root / "DEMOSHOWCASE.png"
+    temp_file.unlink(missing_ok=True)
+    final_file.unlink(missing_ok=True)
+
+    command = [
+        str(editor),
+        str(project_file),
+        demo_map,
+        "-nop4",
+        "-nosplash",
+        "-windowed",
+        "-ResX=1920",
+        "-ResY=1080",
+        f"-ExecCmds=HighResShot 1920x1080 filename={temp_file.as_posix()}",
+    ]
+    process = subprocess.Popen(command)
+    deadline = time.time() + args.timeout
+    last_size = -1
+    stable_count = 0
+    try:
+        while time.time() < deadline:
+            if temp_file.exists():
+                size = temp_file.stat().st_size
+                if size > 0 and size == last_size:
+                    stable_count += 1
+                else:
+                    stable_count = 0
+                last_size = size
+                if stable_count >= 2:
+                    shutil.copyfile(temp_file, final_file)
+                    print(f"Showcase screenshot written: {final_file}")
+                    return
+            if process.poll() is not None and not temp_file.exists():
+                raise SystemExit(f"UnrealEditor exited before writing screenshot. Check logs under {root / 'Saved' / 'Logs'}")
+            time.sleep(1)
+        raise SystemExit(f"Timed out waiting for screenshot: {temp_file}")
+    finally:
+        if process.poll() is None:
+            process.terminate()
+            try:
+                process.wait(timeout=10)
+            except subprocess.TimeoutExpired:
+                process.kill()
 
 
 def validate_project(args: argparse.Namespace) -> None:
@@ -309,13 +413,27 @@ def build_parser() -> argparse.ArgumentParser:
     cover = sub.add_parser("process-showcase", help="Normalize and compress the FAB cover image.")
     cover.add_argument("--input", required=True)
     cover.add_argument("--output", required=True)
-    cover.add_argument("--title", required=True)
-    cover.add_argument("--resolution-label", required=True)
+    cover.add_argument("--title", default="")
+    cover.add_argument("--resolution-label", default="")
+    cover.add_argument(
+        "--skip-text-overlay",
+        action="store_true",
+        help="Only resize/crop/compress an already designed cover; do not draw title/footer text.",
+    )
     cover.set_defaults(func=process_showcase)
 
     ue = sub.add_parser("ue-command", help="Print the UE 5.3 command for in-editor automation.")
     ue.add_argument("--config", type=Path, required=True)
     ue.set_defaults(func=ue_command)
+
+    screenshot = sub.add_parser("screenshot-command", help="Print the UE 5.3 editor-mode command for DEMOSHOWCASE capture.")
+    screenshot.add_argument("--config", type=Path, required=True)
+    screenshot.set_defaults(func=screenshot_command)
+
+    capture = sub.add_parser("capture-showcase", help="Run UE 5.3 editor-mode DEMOSHOWCASE capture and copy it to the project root.")
+    capture.add_argument("--config", type=Path, required=True)
+    capture.add_argument("--timeout", type=int, default=180)
+    capture.set_defaults(func=capture_showcase)
 
     validate = sub.add_parser("validate-project", help="Validate pack project structure.")
     validate.add_argument("--config", type=Path, required=True)

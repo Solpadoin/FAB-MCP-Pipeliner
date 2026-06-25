@@ -6,7 +6,7 @@ The workflow is documented in [SKILL.md](SKILL.md). The repo contains:
 
 - `templates/MedievalPaintings7.zip` - reusable UE template source, originally authored for UE 5.3.
 - `scripts/fab_pipeline.py` - host-side project creation, showcase processing, validation, and zip packaging.
-- `scripts/ue_fab_pipeline.py` - Unreal Python script executed inside UE 5.3 for plugin toggles, texture reimport, redirector cleanup, map loading, screenshot capture, and saves.
+- `scripts/ue_fab_pipeline.py` - Unreal commandlet script for plugin toggles, texture reimport, redirector cleanup, map loading, and saves.
 - `.codex/mcp.example.toml` - example MCP wiring for the selected UE MCP candidate.
 
 Default project output root:
