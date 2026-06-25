@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import json
+import os
+import shutil
 import sys
 from pathlib import Path
 
@@ -21,9 +23,9 @@ def get_arg(prefix: str) -> str | None:
 
 
 def load_config() -> dict:
-    config_path = get_arg("-fab_config=")
+    config_path = get_arg("-fab_config=") or os.environ.get("FAB_CONFIG_PATH")
     if not config_path:
-        raise RuntimeError("Missing -fab_config=<path> argument")
+        raise RuntimeError("Missing -fab_config=<path> argument or FAB_CONFIG_PATH environment variable")
     with open(config_path, "r", encoding="utf-8-sig") as handle:
         return json.load(handle)
 
@@ -82,13 +84,19 @@ def reimport_texture(asset_path: str, source_file: str) -> None:
     if not source.exists():
         raise RuntimeError("Source image not found: {0}".format(source))
 
+    project_root = Path(unreal.Paths.convert_relative_path_to_full(unreal.Paths.project_dir()))
+    import_dir = project_root / "Saved" / "FABPipelineImportSources"
+    import_dir.mkdir(parents=True, exist_ok=True)
+    named_source = import_dir / (asset_name + source.suffix.lower())
+    shutil.copyfile(str(source), str(named_source))
+
     asset_import_data = asset.get_editor_property("asset_import_data")
     if asset_import_data:
-        asset_import_data.scripted_add_filename(str(source), 0, "FAB generated source")
+        asset_import_data.scripted_add_filename(str(named_source), 0, "FAB generated source")
 
     task = unreal.AssetImportTask()
     destination_path, destination_name = asset_path.rsplit("/", 1)
-    task.set_editor_property("filename", str(source))
+    task.set_editor_property("filename", str(named_source))
     task.set_editor_property("destination_path", destination_path)
     task.set_editor_property("destination_name", destination_name)
     task.set_editor_property("replace_existing", True)
@@ -99,9 +107,21 @@ def reimport_texture(asset_path: str, source_file: str) -> None:
     unreal.EditorAssetLibrary.save_asset(asset_path, only_if_is_dirty=False)
 
 
+def delete_stray_interchange_imports(config: dict) -> None:
+    texture_dir = "/Game/{0}/Textures".format(config["pack_folder"])
+    for index in range(1, 12):
+        stray = "{0}/image_{1:02d}".format(texture_dir, index)
+        if unreal.EditorAssetLibrary.does_asset_exist(stray):
+            unreal.EditorAssetLibrary.delete_asset(stray)
+
+
 def fix_redirectors() -> None:
     registry = unreal.AssetRegistryHelpers.get_asset_registry()
-    redirectors = registry.get_assets_by_class("ObjectRedirector", True)
+    try:
+        redirector_class = unreal.TopLevelAssetPath("/Script/CoreUObject", "ObjectRedirector")
+        redirectors = registry.get_assets_by_class(redirector_class, True)
+    except Exception:
+        redirectors = registry.get_assets_by_class("ObjectRedirector", True)
     paths = [data.object_path for data in redirectors if str(data.package_path).startswith("/Game")]
     if not paths:
         return
@@ -138,6 +158,7 @@ def run() -> None:
     for item in config.get("texture_reimports", []):
         reimport_texture(item["asset"], item["source"])
 
+    delete_stray_interchange_imports(config)
     unreal.EditorLoadingAndSavingUtils.save_dirty_packages(True, True)
     fix_redirectors()
     unreal.EditorLoadingAndSavingUtils.save_dirty_packages(True, True)

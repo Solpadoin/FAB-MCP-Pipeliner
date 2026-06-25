@@ -226,6 +226,7 @@ def ue_command(args: argparse.Namespace) -> None:
     editor_cmd = ue_root / "Engine" / "Binaries" / "Win64" / "UnrealEditor-Cmd.exe"
     project_file = project_root(config) / f"{config['project_name']}.uproject"
     script = REPO_ROOT / "scripts" / "ue_fab_pipeline.py"
+    config_path = Path(config["_config_path"]).resolve()
     command = [
         str(editor_cmd),
         str(project_file),
@@ -234,9 +235,9 @@ def ue_command(args: argparse.Namespace) -> None:
         "-nosplash",
         "-run=pythonscript",
         f"-script={script}",
-        f"-fab_config={Path(config['_config_path']).resolve()}",
     ]
-    print(" ".join(f'"{part}"' if " " in part else part for part in command))
+    rendered = " ".join(f'"{part}"' if " " in part else part for part in command)
+    print(f'$env:FAB_CONFIG_PATH="{config_path}"; & {rendered}')
 
 
 def validate_project(args: argparse.Namespace) -> None:
