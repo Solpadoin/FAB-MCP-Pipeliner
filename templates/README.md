@@ -9,5 +9,4 @@ Known facts from inspection:
 - Main content folder: `Content/MedievalPaintings7`
 - Demo map: `Content/MedievalPaintings7/Maps/Demo.umap`
 
-The pipeline rewrites the generated project's `.uproject` to `EngineAssociation` `5.0` and renames the content folder to the current pack folder name. UE 5.0.3 must then open and resave the project assets to validate compatibility.
-
+The pipeline keeps generated projects on `EngineAssociation` `5.3` and renames the content folder to the current pack folder name inside Unreal when requested by config.

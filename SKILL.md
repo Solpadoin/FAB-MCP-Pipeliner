@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Use this skill to create UE 5.0.3 FAB asset-pack projects from generated image sets, reimport those images into template textures, validate the demo level visually, produce a marketplace-ready cover image, and package a clean zip archive.
+Use this skill to create UE 5.3 FAB asset-pack projects from the provided template, replace only the painting texture assets with AI-generated square images, validate the existing demo level, create a marketplace cover, and package a clean zip archive.
 
 Default workspace:
 
@@ -13,102 +13,139 @@ C:\Unreal Engine Projects\FAB-ASSET-PACKS
 Default engine:
 
 ```text
-C:\Program Files\Epic Games\UE_5.0
+C:\Program Files\Epic Games\UE_5.3
 ```
 
-## External MCP Choice
+## Hard Rules
 
-Preferred MCP candidate: `ChiR24/Unreal_mcp` (`https://github.com/ChiR24/Unreal_mcp`).
+- Target Unreal Engine is UE 5.3. Do not use UE 5.0 / 5.0.3 for this pipeline.
+- Do not create images with local procedural generators, Python drawing scripts, SVG placeholders, or synthetic local art.
+- Image generation must use the normal AI image generation tool path, the same kind of generation used when the user asks for images in chat.
+- Python scripts are service tools only. They may call Unreal Engine automation, validate files, crop/resize/compress/edit existing images, zip projects, and manage config. They must not create the source artwork.
+- Do not create a new demo map. Use the demo map from the template.
+- Do not rebuild the asset pack layout from scratch when the template already contains the required assets.
+- Do not modify template assets other than the explicitly allowed painting texture assets.
 
-Selection reason:
+## Template
 
-- The project README states Unreal Engine `5.0-5.8` support.
-- It exposes categories matching this pipeline: Asset Management, Editor Control, Level Management, System/console actions.
-- It includes a native Unreal automation bridge and optional TypeScript bridge.
+Reusable template:
 
-Fallback path: use Unreal Python through `scripts/ue_fab_pipeline.py`. This fallback is required for UE 5.0.3 reliability and is the authoritative implementation for this repository.
+```text
+templates\MedievalPaintings7.zip
+```
 
-Do not use UE 5.8 official MCP for this workflow: it is too new for UE 5.0.3 projects.
+Known template layout:
 
-## Required UE Operations
+```text
+Content\MedievalPaintings7\Maps\Demo.umap
+Content\MedievalPaintings7\Textures\...
+```
 
-Only these UE operations are needed:
+The project may rename the top-level content folder inside Unreal if the pack folder name changes. Asset references must be preserved by Unreal, followed by Fix Up Redirectors.
 
-- Enable required editor scripting plugins for automation.
-- Disable `ModelingToolsEditorMode` / Modeling Tools plugin for every generated project.
-- Import or reimport generated image files into existing texture assets.
-- Save changed packages.
-- Fix up redirectors before packaging.
-- Load the pack demo map.
-- Capture a high-resolution screenshot.
+## Allowed Reimport Targets
+
+Only these texture assets may be replaced:
+
+```text
+T_Photo_01_D
+T_Photo_02_D
+T_Photo_03_D
+T_Photo_04_D
+T_Photo_05_D
+T_Photo_06_D
+T_Picture_01_D
+T_Picture_02_D
+T_Picture_03_D
+T_Picture_04_D
+T_Picture_05_D
+T_Picture_06_D
+T_Picture_07_D
+T_Picture_08_D
+T_Picture_09_D
+T_Picture_10_D
+T_Picture_11_D
+```
+
+Everything else in the template is left untouched.
+
+## Generated Source Images
+
+Generate 11 unique full artwork images for each pack. Use AI image generation, not local drawing.
+
+Requirements for every generated source image:
+
+- Square image.
+- Accepted dimensions: `1024x1024` or `2048x2048`.
+- No watermark.
+- Suitable for the current pack theme.
+- Saved as normal image files on disk before reimport.
+
+The pack may perform 17 total reimports by using the 11 unique images across:
+
+- `T_Picture_01_D` through `T_Picture_11_D`
+- `T_Photo_01_D` through `T_Photo_06_D`
 
 ## Project Creation
 
-1. Create a pack config from `scripts/fab_config.example.json`.
-2. Create the project from the template zip:
+Create a pack config from:
+
+```text
+scripts\fab_config.example.json
+```
+
+Then create the project:
 
 ```powershell
 python scripts\fab_pipeline.py create-project --config path\to\pack.json
 ```
 
-3. Confirm the generated `.uproject` uses `EngineAssociation` `5.0`.
-4. Confirm the project path is under:
+The generated `.uproject` must use:
 
-```text
-C:\Unreal Engine Projects\FAB-ASSET-PACKS
+```json
+"EngineAssociation": "5.3"
 ```
 
-5. Open/resave in UE 5.0.3 to convert the template from 5.3-era assets when needed.
-6. Do not rename the template content folder with filesystem tools. The Unreal automation step renames `/Game/<template_pack_folder>` to `/Game/<pack_folder>` inside the editor, then fixes redirectors.
+Modeling Tools must be disabled for generated projects.
 
-## Image Generation Requirements
+## Unreal Automation
 
-Generate 11 unique source images per asset pack. Produce 20 total texture imports by reusing selected images across the template's picture/photo texture slots.
-
-Track every generated source image and target texture in the pack config under `texture_reimports`.
-
-## Unreal Automation Run
-
-Run UE 5.0.3 with the repository Unreal Python script:
+Run the Unreal automation command generated by:
 
 ```powershell
 python scripts\fab_pipeline.py ue-command --config path\to\pack.json
 ```
 
-The command prints the `UnrealEditor-Cmd.exe` invocation. Execute it when the config is ready.
+The Unreal script performs only these operations:
 
-The UE script must:
-
-1. Disable Modeling Tools.
-2. Enable Python/Editor scripting dependencies if missing.
-3. Reimport each generated image into its target texture asset.
-4. Save all touched assets.
-5. Fix up redirectors under `/Game`.
-6. Load the configured demo map.
+1. Configure required editor scripting plugins and disable Modeling Tools.
+2. Optionally rename the template pack folder inside Unreal.
+3. Reimport only the allowed painting texture assets from the config.
+4. Save changed assets.
+5. Fix up redirectors.
+6. Load the existing template demo map.
 7. Save the level.
-8. Capture `DEMOSHOWCASE.png` into the project root.
+8. Request `DEMOSHOWCASE.png` in the project root.
 
-MCP alternative: use the configured Unreal MCP to call equivalent tools for plugin state, asset import/reimport, level load, console command/screenshot, asset save, and redirector cleanup. If MCP tool names differ, call arbitrary editor Python through the MCP and execute `scripts/ue_fab_pipeline.py` logic inside the editor.
+## Screenshot Review
 
-## Demo Screenshot Review
-
-After the UE automation run, inspect:
+After automation, inspect:
 
 ```text
 <ProjectRoot>\DEMOSHOWCASE.png
 ```
 
-Validate visually:
+Validate:
 
-- Every painting frame has a visible imported texture.
-- There are no checkerboards, missing materials, blank placeholders, or broken imports.
-- The demo level is the expected pack demo level.
+- The existing template demo map is used.
+- All displayed paintings show the generated images.
+- No missing imports, checkerboards, blank textures, or broken materials are visible.
 
-If visual validation fails, fix imports and rerun the UE automation.
+If validation fails, fix the image/config/reimport issue and rerun automation. Do not create a replacement demo map.
 
 ## Marketplace Cover
 
-Use `DEMOSHOWCASE.png` as input for image editing with this prompt:
+Use `DEMOSHOWCASE.png` as the base image and edit it with this prompt:
 
 ```text
 Измени плейсхолдер стены на что-то подходящее для этой темматики. Формат изображения выполни 16:9. Сверху на английском название нашего ассет пака (например Medieval Paintings Pack Vol.1).
@@ -116,33 +153,33 @@ Use `DEMOSHOWCASE.png` as input for image editing with this prompt:
 Снизу - разрешение наших картинок. Изображение должно быть понятным, читаемым, отлично подходящим в качестве обложки для маркетплейса FAB.
 ```
 
-Then normalize the result:
+Then normalize/compress the edited cover:
 
 ```powershell
-python scripts\fab_pipeline.py process-showcase --input path\to\edited.png --output path\to\FAB_Cover.jpg --title "Medieval Paintings Pack Vol.1" --resolution-label "2048x2048 PNG textures"
+python scripts\fab_pipeline.py process-showcase --input path\to\edited.png --output path\to\FAB_Cover.jpg --title "Pack Name Vol.1" --resolution-label "2048x2048 PNG textures"
 ```
 
 Final cover requirements:
 
 - Exact dimensions: `1980x1920`.
 - File size: at or below `3 MB`.
-- Light compression is allowed if size is too large.
+- Light compression is allowed if needed.
 
-Note: the prompt asks for a 16:9 composition, while the required final file size is `1980x1920`. Treat this as a 16:9 visual composition placed within the required marketplace canvas.
-
-## Content Cleanup And Validation
+## Validation
 
 Before packaging:
-
-1. Ensure the project is UE 5.0.3 / `EngineAssociation` `5.0`.
-2. Ensure `Content` contains only the current asset-pack folder.
-3. Remove `StarterContent` and all other unrelated content folders.
-4. Run redirector cleanup again through UE before zipping.
-5. Validate with:
 
 ```powershell
 python scripts\fab_pipeline.py validate-project --config path\to\pack.json
 ```
+
+Validation must confirm:
+
+- UE association is `5.3`.
+- `Content` contains only the current asset-pack folder.
+- `Config` exists.
+- Generated source images used for reimport are square `1024x1024` or `2048x2048`.
+- Reimport targets are only the allowed painting texture assets.
 
 ## Packaging
 
@@ -152,14 +189,14 @@ Create the final zip:
 python scripts\fab_pipeline.py zip-project --config path\to\pack.json --output C:\path\to\PackName.zip
 ```
 
-The archive must include:
+The archive includes:
 
 - `.uproject`
 - `Content`
 - `Config`
 - optional required project `Plugins`
 
-The archive must exclude Unreal cache/generated folders:
+The archive excludes Unreal cache/generated folders:
 
 - `Binaries`
 - `DerivedDataCache`
@@ -167,6 +204,3 @@ The archive must exclude Unreal cache/generated folders:
 - `Saved`
 - `.vs`
 
-## Throughput Target
-
-The pipeline is designed so a later run can produce 5-8 full asset packs within a 5 hour work window when image generation is available and the UE template conversion is stable.

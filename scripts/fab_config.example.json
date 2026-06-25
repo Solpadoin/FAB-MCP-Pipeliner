@@ -6,11 +6,15 @@
   "template_zip": "templates/MedievalPaintings7.zip",
   "template_pack_folder": "MedievalPaintings7",
   "projects_root": "C:/Unreal Engine Projects/FAB-ASSET-PACKS",
-  "ue_root": "C:/Program Files/Epic Games/UE_5.0",
+  "ue_root": "C:/Program Files/Epic Games/UE_5.3",
   "demo_map": "/Game/MedievalPaintingsPackVol1/Maps/Demo",
   "texture_reimports": [
     {
       "asset": "/Game/MedievalPaintingsPackVol1/Textures/T_Picture_01_D",
+      "source": "C:/path/to/generated/image_01.png"
+    },
+    {
+      "asset": "/Game/MedievalPaintingsPackVol1/Textures/T_Photo_01_D",
       "source": "C:/path/to/generated/image_01.png"
     }
   ]

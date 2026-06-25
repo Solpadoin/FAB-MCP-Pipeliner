@@ -7,6 +7,12 @@ from pathlib import Path
 import unreal
 
 
+ALLOWED_TEXTURE_NAMES = {
+    *(f"T_Photo_{index:02d}_D" for index in range(1, 7)),
+    *(f"T_Picture_{index:02d}_D" for index in range(1, 12)),
+}
+
+
 def get_arg(prefix: str) -> str | None:
     for arg in sys.argv:
         if arg.startswith(prefix):
@@ -18,7 +24,7 @@ def load_config() -> dict:
     config_path = get_arg("-fab_config=")
     if not config_path:
         raise RuntimeError("Missing -fab_config=<path> argument")
-    with open(config_path, "r", encoding="utf-8") as handle:
+    with open(config_path, "r", encoding="utf-8-sig") as handle:
         return json.load(handle)
 
 
@@ -64,6 +70,10 @@ def rename_template_pack_folder(config: dict) -> None:
 
 
 def reimport_texture(asset_path: str, source_file: str) -> None:
+    asset_name = asset_path.rsplit("/", 1)[-1]
+    if asset_name not in ALLOWED_TEXTURE_NAMES:
+        raise RuntimeError("Refusing to reimport non-picture texture: {0}".format(asset_path))
+
     asset = unreal.EditorAssetLibrary.load_asset(asset_path)
     if asset is None:
         raise RuntimeError("Texture asset not found: {0}".format(asset_path))
