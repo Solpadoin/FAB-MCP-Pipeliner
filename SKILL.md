@@ -194,7 +194,7 @@ python scripts\fab_pipeline.py process-showcase --input path\to\edited.png --out
 
 Final cover requirements:
 
-- Exact dimensions: `1980x1920`.
+- Exact dimensions: `1920x1080`.
 - File size: at or below `3 MB`.
 - Light compression is allowed if needed.
 
