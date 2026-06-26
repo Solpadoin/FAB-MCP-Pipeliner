@@ -172,12 +172,41 @@ If validation fails, fix the image/config/reimport issue and rerun automation. D
 
 ## Marketplace Cover
 
-Use `DEMOSHOWCASE.png` as the base image and edit it with this prompt:
+Use `DEMOSHOWCASE.png` as the edit target for the cover image. Before calling AI image editing, inspect `DEMOSHOWCASE.png` so it is visible in context.
+
+Hard cover rules:
+
+- The cover must be a strict edit of the current asset pack's `DEMOSHOWCASE.png`.
+- Preserve the exact number of visible paintings, their positions, their frame shapes, and their artwork contents.
+- Do not add extra paintings, remove paintings, rearrange paintings, replace painting contents, or invent new artwork.
+- Change only the checker/placeholder wall and floor into a themed showcase background.
+- Add only the required top title and bottom texture-resolution text.
+- If the edited cover contains extra paintings or changed painting content, reject it and regenerate with a stricter prompt.
+
+Use `cover-prompt` to print the standard strict edit prompt:
+
+```powershell
+python scripts\fab_pipeline.py cover-prompt --config path\to\pack.json --theme-note "short theme note"
+```
+
+Default strict prompt:
 
 ```text
-Change the placeholder wall into something appropriate for this asset-pack theme. Keep a 16:9 cover composition. Add the asset pack name in English at the top, for example "Medieval Paintings Pack Vol.1".
+Use case: precise-object-edit
+Asset type: FAB marketplace cover image based on the provided DEMOSHOWCASE screenshot.
+Input image role: edit target; preserve the framed asset-pack showcase exactly.
+Primary request: Turn this exact Unreal Engine demo screenshot into a polished FAB marketplace cover.
+Required changes: Replace only the gray checker placeholder wall and floor with a themed showcase wall/background that fits this asset pack.
+Invariants: Keep exactly the same visible paintings from the screenshot. Keep their count, positions, sizes, frame shapes, and image contents. Do not add, remove, duplicate, rearrange, or repaint any framed artwork.
+Text: Add the pack title at the top in English. Add the texture resolution at the bottom.
+Composition/framing: 16:9 marketplace cover, centered product showcase, readable at thumbnail size.
+Constraints: no extra paintings, no invented paintings, no changed painting contents, no extra logos, no watermark, no people, no brand marks, no random text.
+```
 
-At the bottom, add the resolution of our images. The image must be clear, readable, polished, and suitable as a FAB marketplace cover.
+For a specific pack, replace the text line with exact values:
+
+```text
+Text (verbatim): Top text: "<Pack Title>". Bottom text: "<Resolution Label>".
 ```
 
 If the edited AI cover already contains the top title and bottom resolution text, normalize/compress it without drawing text again:

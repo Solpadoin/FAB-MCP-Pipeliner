@@ -243,6 +243,26 @@ def process_showcase(args: argparse.Namespace) -> None:
     print(f"Size: {TARGET_COVER_SIZE[0]}x{TARGET_COVER_SIZE[1]}, bytes: {output_path.stat().st_size}, jpeg quality: {quality}")
 
 
+def cover_prompt(args: argparse.Namespace) -> None:
+    config = load_config(args.config)
+    theme_note = args.theme_note.strip() if args.theme_note else "match this asset pack's theme"
+    print(
+        "\n".join(
+            [
+                "Use case: precise-object-edit",
+                "Asset type: FAB marketplace cover image based on the provided DEMOSHOWCASE screenshot.",
+                "Input image role: edit target; preserve the framed asset-pack showcase exactly.",
+                "Primary request: Turn this exact Unreal Engine demo screenshot into a polished FAB marketplace cover.",
+                f"Required changes: Replace only the gray checker placeholder wall and floor with a themed showcase wall/background that fits this asset pack: {theme_note}.",
+                "Invariants: Keep exactly the same visible paintings from the screenshot. Keep their count, positions, sizes, frame shapes, and image contents. Do not add, remove, duplicate, rearrange, or repaint any framed artwork.",
+                f'Text (verbatim): Top text: "{config["pack_title"]}". Bottom text: "{config["image_resolution_label"]}".',
+                "Composition/framing: 16:9 marketplace cover, centered product showcase, readable at thumbnail size.",
+                "Constraints: no extra paintings, no invented paintings, no changed painting contents, no extra logos, no watermark, no people, no brand marks, no random text.",
+            ]
+        )
+    )
+
+
 def ue_command(args: argparse.Namespace) -> None:
     config = load_config(args.config)
     validate_texture_reimports(config)
@@ -421,6 +441,11 @@ def build_parser() -> argparse.ArgumentParser:
         help="Only resize/crop/compress an already designed cover; do not draw title/footer text.",
     )
     cover.set_defaults(func=process_showcase)
+
+    prompt = sub.add_parser("cover-prompt", help="Print the strict AI edit prompt for a DEMOSHOWCASE-based FAB cover.")
+    prompt.add_argument("--config", type=Path, required=True)
+    prompt.add_argument("--theme-note", default="")
+    prompt.set_defaults(func=cover_prompt)
 
     ue = sub.add_parser("ue-command", help="Print the UE 5.3 command for in-editor automation.")
     ue.add_argument("--config", type=Path, required=True)
