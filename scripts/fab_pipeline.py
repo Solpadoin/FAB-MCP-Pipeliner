@@ -24,6 +24,7 @@ DEFAULT_PROJECTS_ROOT = Path(r"C:\Unreal Engine Projects\FAB-ASSET-PACKS")
 DEFAULT_UE_ROOT = Path(r"C:\Program Files\Epic Games\UE_5.3")
 TARGET_ENGINE_ASSOCIATION = "5.3"
 TARGET_COVER_SIZE = (1920, 1080)
+DEFAULT_SHOWCASE_SIZE = (3840, 2160)
 MAX_COVER_BYTES = 3 * 1024 * 1024
 EXCLUDED_ARCHIVE_DIRS = {".vs", "Binaries", "DerivedDataCache", "Intermediate", "Saved"}
 ALLOWED_TEXTURE_NAMES = {
@@ -246,18 +247,22 @@ def process_showcase(args: argparse.Namespace) -> None:
 def cover_prompt(args: argparse.Namespace) -> None:
     config = load_config(args.config)
     theme_note = args.theme_note.strip() if args.theme_note else "match this asset pack's theme"
+    title = config["pack_title"]
+    resolution = config["image_resolution_label"]
     print(
         "\n".join(
             [
                 "Use case: precise-object-edit",
                 "Asset type: FAB marketplace cover image based on the provided DEMOSHOWCASE screenshot.",
-                "Input image role: edit target; preserve the framed asset-pack showcase exactly.",
+                "Input image role: edit target. Treat every framed painting and frame as locked foreground product content.",
                 "Primary request: Turn this exact Unreal Engine demo screenshot into a polished FAB marketplace cover.",
-                f"Required changes: Replace only the gray checker placeholder wall and floor with a themed showcase wall/background that fits this asset pack: {theme_note}.",
-                "Invariants: Keep exactly the same visible paintings from the screenshot. Keep their count, positions, sizes, frame shapes, and image contents. Do not add, remove, duplicate, rearrange, or repaint any framed artwork.",
-                "Text: do not add any text; title and resolution bars will be added later by script.",
-                "Composition/framing: 16:9 marketplace cover, centered product showcase, readable at thumbnail size.",
-                "Constraints: no extra paintings, no invented paintings, no changed painting contents, no extra logos, no watermark, no people, no brand marks, no random text.",
+                f"Required visual change: Replace only the gray checker placeholder wall and floor with a themed showcase wall/background that fits this asset pack: {theme_note}.",
+                "Locked invariants: Keep the same visible paintings from the screenshot. Keep their count, positions, sizes, frame shapes, frame colors, shadows, and artwork contents. Do not add, remove, duplicate, rearrange, crop out, upscale into new positions, or repaint any framed artwork.",
+                f'Text (verbatim): Add large readable top title "{title}". Add bottom text "{resolution}".',
+                "Text placement: top title and bottom resolution must be clear, centered, readable, and not cover the paintings.",
+                "Composition/framing: 16:9 marketplace cover, centered product showcase, premium fantasy-game marketplace presentation.",
+                "Allowed changes: wall material, floor material, lighting, vignette, subtle themed props only outside the framed artwork area.",
+                "Constraints: no extra paintings, no invented paintings, no changed painting contents, no extra logos, no watermark, no people, no brand marks, no random text other than the required title and resolution.",
             ]
         )
     )
@@ -291,6 +296,9 @@ def screenshot_command(args: argparse.Namespace) -> None:
     project_file = project_root(config) / f"{config['project_name']}.uproject"
     demo_map = config.get("demo_map") or f"/Game/{config['pack_folder']}/Maps/Demo"
     screenshot_temp = Path(r"C:\FABPipelineScreenshots") / f"{config['project_name']}_DEMOSHOWCASE.png"
+    width = args.width
+    height = args.height
+    exec_cmds = f"HighResShot {width}x{height} filename={screenshot_temp.as_posix()}"
     command = [
         str(editor),
         str(project_file),
@@ -298,9 +306,10 @@ def screenshot_command(args: argparse.Namespace) -> None:
         "-nop4",
         "-nosplash",
         "-windowed",
+        "-NoTextureStreaming",
         "-ResX=1920",
         "-ResY=1080",
-        f"-ExecCmds=HighResShot 1920x1080 filename={screenshot_temp.as_posix()}",
+        f"-ExecCmds={exec_cmds}",
     ]
     rendered = " ".join(f'"{part}"' if " " in part else part for part in command)
     print(f'New-Item -ItemType Directory -Force -Path "{screenshot_temp.parent}" | Out-Null')
@@ -320,8 +329,11 @@ def capture_showcase(args: argparse.Namespace) -> None:
     temp_dir.mkdir(parents=True, exist_ok=True)
     temp_file = temp_dir / f"{config['project_name']}_DEMOSHOWCASE.png"
     final_file = root / "DEMOSHOWCASE.png"
+    width = args.width
+    height = args.height
     temp_file.unlink(missing_ok=True)
     final_file.unlink(missing_ok=True)
+    exec_cmds = f"HighResShot {width}x{height} filename={temp_file.as_posix()}"
 
     command = [
         str(editor),
@@ -330,9 +342,10 @@ def capture_showcase(args: argparse.Namespace) -> None:
         "-nop4",
         "-nosplash",
         "-windowed",
+        "-NoTextureStreaming",
         "-ResX=1920",
         "-ResY=1080",
-        f"-ExecCmds=HighResShot 1920x1080 filename={temp_file.as_posix()}",
+        f"-ExecCmds={exec_cmds}",
     ]
     process = subprocess.Popen(command)
     deadline = time.time() + args.timeout
@@ -453,11 +466,15 @@ def build_parser() -> argparse.ArgumentParser:
 
     screenshot = sub.add_parser("screenshot-command", help="Print the UE 5.3 editor-mode command for DEMOSHOWCASE capture.")
     screenshot.add_argument("--config", type=Path, required=True)
+    screenshot.add_argument("--width", type=int, default=DEFAULT_SHOWCASE_SIZE[0])
+    screenshot.add_argument("--height", type=int, default=DEFAULT_SHOWCASE_SIZE[1])
     screenshot.set_defaults(func=screenshot_command)
 
     capture = sub.add_parser("capture-showcase", help="Run UE 5.3 editor-mode DEMOSHOWCASE capture and copy it to the project root.")
     capture.add_argument("--config", type=Path, required=True)
     capture.add_argument("--timeout", type=int, default=180)
+    capture.add_argument("--width", type=int, default=DEFAULT_SHOWCASE_SIZE[0])
+    capture.add_argument("--height", type=int, default=DEFAULT_SHOWCASE_SIZE[1])
     capture.set_defaults(func=capture_showcase)
 
     validate = sub.add_parser("validate-project", help="Validate pack project structure.")

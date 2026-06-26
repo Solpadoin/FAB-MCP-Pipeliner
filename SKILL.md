@@ -73,6 +73,8 @@ Everything else in the template is left untouched.
 
 Generate 11 unique full artwork images for each pack. Use AI image generation, not local drawing.
 
+For speed, generate source images in small bursts when the tool allows it: run 3-4 image generations, then wait about 5 minutes before the next burst. This is faster than fully sequential generation while keeping rate limiting manageable.
+
 Requirements for every generated source image:
 
 - Square image.
@@ -141,7 +143,7 @@ This runs `UnrealEditor.exe` in editor mode, not `UnrealEditor-Cmd.exe`, and not
 The capture tool must:
 
 1. Load the existing template demo map.
-2. Execute `HighResShot 1920x1080` against the editor viewport.
+2. Execute a high-resolution screenshot against the editor viewport. Default capture is `3840x2160`; use `1920x1080` only for quick drafts.
 3. Save first to a temporary path without spaces, such as `C:\FABPipelineScreenshots\<ProjectName>_DEMOSHOWCASE.png`.
 4. Copy the result to `<ProjectRoot>\DEMOSHOWCASE.png`.
 5. Close Unreal Editor after the file is written.
@@ -180,8 +182,9 @@ Hard cover rules:
 - Preserve the exact number of visible paintings, their positions, their frame shapes, and their artwork contents.
 - Do not add extra paintings, remove paintings, rearrange paintings, replace painting contents, or invent new artwork.
 - Change only the checker/placeholder wall and floor into a themed showcase background.
-- Do not ask AI to render the title or resolution text. Add text locally with `process-showcase` so spelling and placement are deterministic.
-- If the edited cover contains extra paintings or changed painting content, reject it. Either regenerate once with a stricter prompt or use the safe deterministic fallback from the original `DEMOSHOWCASE.png`.
+- Ask AI to render the final marketplace cover, including the top title and bottom resolution text.
+- If the edited cover keeps the placeholder checker wall/floor, reject it and regenerate with a stronger theme/background instruction.
+- If the edited cover contains extra paintings or changed painting content, reject it and regenerate with a stricter prompt.
 
 Use `cover-prompt` to print the standard strict edit prompt:
 
@@ -194,31 +197,21 @@ Default strict prompt:
 ```text
 Use case: precise-object-edit
 Asset type: FAB marketplace cover image based on the provided DEMOSHOWCASE screenshot.
-Input image role: edit target; preserve the framed asset-pack showcase exactly.
+Input image role: edit target. Treat every framed painting and frame as locked foreground product content.
 Primary request: Turn this exact Unreal Engine demo screenshot into a polished FAB marketplace cover.
-Required changes: Replace only the gray checker placeholder wall and floor with a themed showcase wall/background that fits this asset pack.
-Invariants: Keep exactly the same visible paintings from the screenshot. Keep their count, positions, sizes, frame shapes, and image contents. Do not add, remove, duplicate, rearrange, or repaint any framed artwork.
-Text: do not add any text; title and resolution bars will be added later by script.
-Composition/framing: 16:9 marketplace cover, centered product showcase, readable at thumbnail size.
-Constraints: no extra paintings, no invented paintings, no changed painting contents, no extra logos, no watermark, no people, no brand marks, no random text.
+Required visual change: Replace only the gray checker placeholder wall and floor with a themed showcase wall/background that fits this asset pack.
+Locked invariants: Keep the same visible paintings from the screenshot. Keep their count, positions, sizes, frame shapes, frame colors, shadows, and artwork contents. Do not add, remove, duplicate, rearrange, crop out, upscale into new positions, or repaint any framed artwork.
+Text (verbatim): Add large readable top title "<Pack Title>". Add bottom text "<Resolution Label>".
+Text placement: top title and bottom resolution must be clear, centered, readable, and not cover the paintings.
+Composition/framing: 16:9 marketplace cover, centered product showcase, premium fantasy-game marketplace presentation.
+Allowed changes: wall material, floor material, lighting, vignette, subtle themed props only outside the framed artwork area.
+Constraints: no extra paintings, no invented paintings, no changed painting contents, no extra logos, no watermark, no people, no brand marks, no random text other than the required title and resolution.
 ```
 
-After AI edit, add exact pack text locally:
+Normalize/compress the AI cover without drawing extra text:
 
 ```powershell
-python scripts\fab_pipeline.py process-showcase --input path\to\edited.png --output path\to\FAB_Cover.jpg --title "Pack Name Vol.1" --resolution-label "2048x2048 PNG textures"
-```
-
-If AI changes any framed painting, do not use that cover. Use the original `DEMOSHOWCASE.png` as the safe fallback and add text bars locally:
-
-```powershell
-python scripts\fab_pipeline.py process-showcase --input path\to\DEMOSHOWCASE.png --output path\to\FAB_Cover.jpg --title "Pack Name Vol.1" --resolution-label "2048x2048 PNG textures"
-```
-
-Use `--skip-text-overlay` only when the cover source already has final, correct text and should not receive script bars:
-
-```powershell
-python scripts\fab_pipeline.py process-showcase --input path\to\ready-cover.png --output path\to\FAB_Cover.jpg --skip-text-overlay
+python scripts\fab_pipeline.py process-showcase --input path\to\edited-cover.png --output path\to\FAB_Cover.jpg --skip-text-overlay
 ```
 
 Final cover requirements:
