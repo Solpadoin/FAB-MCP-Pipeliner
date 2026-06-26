@@ -255,7 +255,7 @@ def cover_prompt(args: argparse.Namespace) -> None:
                 "Primary request: Turn this exact Unreal Engine demo screenshot into a polished FAB marketplace cover.",
                 f"Required changes: Replace only the gray checker placeholder wall and floor with a themed showcase wall/background that fits this asset pack: {theme_note}.",
                 "Invariants: Keep exactly the same visible paintings from the screenshot. Keep their count, positions, sizes, frame shapes, and image contents. Do not add, remove, duplicate, rearrange, or repaint any framed artwork.",
-                f'Text (verbatim): Top text: "{config["pack_title"]}". Bottom text: "{config["image_resolution_label"]}".',
+                "Text: do not add any text; title and resolution bars will be added later by script.",
                 "Composition/framing: 16:9 marketplace cover, centered product showcase, readable at thumbnail size.",
                 "Constraints: no extra paintings, no invented paintings, no changed painting contents, no extra logos, no watermark, no people, no brand marks, no random text.",
             ]

@@ -180,8 +180,8 @@ Hard cover rules:
 - Preserve the exact number of visible paintings, their positions, their frame shapes, and their artwork contents.
 - Do not add extra paintings, remove paintings, rearrange paintings, replace painting contents, or invent new artwork.
 - Change only the checker/placeholder wall and floor into a themed showcase background.
-- Add only the required top title and bottom texture-resolution text.
-- If the edited cover contains extra paintings or changed painting content, reject it and regenerate with a stricter prompt.
+- Do not ask AI to render the title or resolution text. Add text locally with `process-showcase` so spelling and placement are deterministic.
+- If the edited cover contains extra paintings or changed painting content, reject it. Either regenerate once with a stricter prompt or use the safe deterministic fallback from the original `DEMOSHOWCASE.png`.
 
 Use `cover-prompt` to print the standard strict edit prompt:
 
@@ -198,27 +198,27 @@ Input image role: edit target; preserve the framed asset-pack showcase exactly.
 Primary request: Turn this exact Unreal Engine demo screenshot into a polished FAB marketplace cover.
 Required changes: Replace only the gray checker placeholder wall and floor with a themed showcase wall/background that fits this asset pack.
 Invariants: Keep exactly the same visible paintings from the screenshot. Keep their count, positions, sizes, frame shapes, and image contents. Do not add, remove, duplicate, rearrange, or repaint any framed artwork.
-Text: Add the pack title at the top in English. Add the texture resolution at the bottom.
+Text: do not add any text; title and resolution bars will be added later by script.
 Composition/framing: 16:9 marketplace cover, centered product showcase, readable at thumbnail size.
 Constraints: no extra paintings, no invented paintings, no changed painting contents, no extra logos, no watermark, no people, no brand marks, no random text.
 ```
 
-For a specific pack, replace the text line with exact values:
-
-```text
-Text (verbatim): Top text: "<Pack Title>". Bottom text: "<Resolution Label>".
-```
-
-If the edited AI cover already contains the top title and bottom resolution text, normalize/compress it without drawing text again:
-
-```powershell
-python scripts\fab_pipeline.py process-showcase --input path\to\edited.png --output path\to\FAB_Cover.jpg --skip-text-overlay
-```
-
-If the edited cover does not contain text yet, normalize/compress it and add the text bars:
+After AI edit, add exact pack text locally:
 
 ```powershell
 python scripts\fab_pipeline.py process-showcase --input path\to\edited.png --output path\to\FAB_Cover.jpg --title "Pack Name Vol.1" --resolution-label "2048x2048 PNG textures"
+```
+
+If AI changes any framed painting, do not use that cover. Use the original `DEMOSHOWCASE.png` as the safe fallback and add text bars locally:
+
+```powershell
+python scripts\fab_pipeline.py process-showcase --input path\to\DEMOSHOWCASE.png --output path\to\FAB_Cover.jpg --title "Pack Name Vol.1" --resolution-label "2048x2048 PNG textures"
+```
+
+Use `--skip-text-overlay` only when the cover source already has final, correct text and should not receive script bars:
+
+```powershell
+python scripts\fab_pipeline.py process-showcase --input path\to\ready-cover.png --output path\to\FAB_Cover.jpg --skip-text-overlay
 ```
 
 Final cover requirements:
