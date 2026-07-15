@@ -38,6 +38,7 @@ PACKAGING_DISABLED_PLUGINS = {
 ALLOWED_TEXTURE_NAMES = {
     *(f"T_Photo_{index:02d}_D" for index in range(1, 7)),
     *(f"T_Picture_{index:02d}_D" for index in range(1, 14)),
+    "T_Picture_N",
 }
 ALLOWED_SOURCE_SIZES = {(1024, 1024), (2048, 2048)}
 
@@ -132,6 +133,22 @@ def validate_texture_reimports(config: dict) -> None:
     reimports = config.get("texture_reimports", [])
     if not reimports:
         return
+
+    target_names = [item["asset"].rsplit("/", 1)[-1] for item in reimports]
+    target_set = set(target_names)
+    if len(target_names) != len(ALLOWED_TEXTURE_NAMES) or target_set != ALLOWED_TEXTURE_NAMES:
+        missing = ", ".join(sorted(ALLOWED_TEXTURE_NAMES - target_set)) or "none"
+        extra = ", ".join(sorted(target_set - ALLOWED_TEXTURE_NAMES)) or "none"
+        raise SystemExit(
+            f"Texture reimports must contain exactly {len(ALLOWED_TEXTURE_NAMES)} allowed targets. "
+            f"Missing: {missing}. Extra: {extra}."
+        )
+    if len(target_names) != len(target_set):
+        raise SystemExit("Texture reimports contain duplicate target assets.")
+
+    resolved_sources = [str(Path(item["source"]).resolve()).casefold() for item in reimports]
+    if len(resolved_sources) != len(set(resolved_sources)):
+        raise SystemExit("Texture reimports must use a unique source image for every target asset.")
 
     for item in reimports:
         asset = item["asset"]

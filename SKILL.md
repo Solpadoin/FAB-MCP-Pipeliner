@@ -67,13 +67,14 @@ T_Picture_10_D
 T_Picture_11_D
 T_Picture_12_D
 T_Picture_13_D
+T_Picture_N
 ```
 
 Everything else in the template is left untouched.
 
 ## Generated Source Images
 
-Generate 13 unique full artwork images for each pack. Use AI image generation, not local drawing.
+Generate 20 unique full artwork images for each pack. Use AI image generation, not local drawing.
 
 For speed, generate source images in small bursts when the tool allows it: run 3-4 image generations, then wait about 5 minutes before the next burst. This is faster than fully sequential generation while keeping rate limiting manageable.
 
@@ -87,10 +88,11 @@ Requirements for every generated source image:
 - Suitable for the current pack theme.
 - Saved as normal image files on disk before reimport.
 
-The pack may perform 19 total reimports by using the 13 unique images across:
+The pack must perform 20 total reimports with a unique source image for every texture target. Do not reuse source images between targets.
 
 - `T_Picture_01_D` through `T_Picture_13_D`
 - `T_Photo_01_D` through `T_Photo_06_D`
+- `T_Picture_N`
 
 ## Project Creation
 

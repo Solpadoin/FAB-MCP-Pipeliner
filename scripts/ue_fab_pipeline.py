@@ -12,6 +12,7 @@ import unreal
 ALLOWED_TEXTURE_NAMES = {
     *(f"T_Photo_{index:02d}_D" for index in range(1, 7)),
     *(f"T_Picture_{index:02d}_D" for index in range(1, 14)),
+    "T_Picture_N",
 }
 
 
@@ -109,7 +110,7 @@ def reimport_texture(asset_path: str, source_file: str) -> None:
 
 def delete_stray_interchange_imports(config: dict) -> None:
     texture_dir = "/Game/{0}/Textures".format(config["pack_folder"])
-    for index in range(1, 14):
+    for index in range(1, 21):
         stray = "{0}/image_{1:02d}".format(texture_dir, index)
         if unreal.EditorAssetLibrary.does_asset_exist(stray):
             unreal.EditorAssetLibrary.delete_asset(stray)

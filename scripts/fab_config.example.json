@@ -14,8 +14,80 @@
       "source": "C:/path/to/generated/image_01.png"
     },
     {
+      "asset": "/Game/MedievalPaintingsPackVol1/Textures/T_Picture_02_D",
+      "source": "C:/path/to/generated/image_02.png"
+    },
+    {
+      "asset": "/Game/MedievalPaintingsPackVol1/Textures/T_Picture_03_D",
+      "source": "C:/path/to/generated/image_03.png"
+    },
+    {
+      "asset": "/Game/MedievalPaintingsPackVol1/Textures/T_Picture_04_D",
+      "source": "C:/path/to/generated/image_04.png"
+    },
+    {
+      "asset": "/Game/MedievalPaintingsPackVol1/Textures/T_Picture_05_D",
+      "source": "C:/path/to/generated/image_05.png"
+    },
+    {
+      "asset": "/Game/MedievalPaintingsPackVol1/Textures/T_Picture_06_D",
+      "source": "C:/path/to/generated/image_06.png"
+    },
+    {
+      "asset": "/Game/MedievalPaintingsPackVol1/Textures/T_Picture_07_D",
+      "source": "C:/path/to/generated/image_07.png"
+    },
+    {
+      "asset": "/Game/MedievalPaintingsPackVol1/Textures/T_Picture_08_D",
+      "source": "C:/path/to/generated/image_08.png"
+    },
+    {
+      "asset": "/Game/MedievalPaintingsPackVol1/Textures/T_Picture_09_D",
+      "source": "C:/path/to/generated/image_09.png"
+    },
+    {
+      "asset": "/Game/MedievalPaintingsPackVol1/Textures/T_Picture_10_D",
+      "source": "C:/path/to/generated/image_10.png"
+    },
+    {
+      "asset": "/Game/MedievalPaintingsPackVol1/Textures/T_Picture_11_D",
+      "source": "C:/path/to/generated/image_11.png"
+    },
+    {
+      "asset": "/Game/MedievalPaintingsPackVol1/Textures/T_Picture_12_D",
+      "source": "C:/path/to/generated/image_12.png"
+    },
+    {
+      "asset": "/Game/MedievalPaintingsPackVol1/Textures/T_Picture_13_D",
+      "source": "C:/path/to/generated/image_13.png"
+    },
+    {
+      "asset": "/Game/MedievalPaintingsPackVol1/Textures/T_Picture_N",
+      "source": "C:/path/to/generated/image_14.png"
+    },
+    {
       "asset": "/Game/MedievalPaintingsPackVol1/Textures/T_Photo_01_D",
-      "source": "C:/path/to/generated/image_01.png"
+      "source": "C:/path/to/generated/image_15.png"
+    },
+    {
+      "asset": "/Game/MedievalPaintingsPackVol1/Textures/T_Photo_02_D",
+      "source": "C:/path/to/generated/image_16.png"
+    },
+    {
+      "asset": "/Game/MedievalPaintingsPackVol1/Textures/T_Photo_03_D",
+      "source": "C:/path/to/generated/image_17.png"
+    },
+    {
+      "asset": "/Game/MedievalPaintingsPackVol1/Textures/T_Photo_04_D",
+      "source": "C:/path/to/generated/image_18.png"
+    },
+    {
+      "asset": "/Game/MedievalPaintingsPackVol1/Textures/T_Photo_05_D",
+      "source": "C:/path/to/generated/image_19.png"
+    },
+    {
+      "asset": "/Game/MedievalPaintingsPackVol1/Textures/T_Photo_06_D",
+      "source": "C:/path/to/generated/image_20.png"
     }
   ]
 }
