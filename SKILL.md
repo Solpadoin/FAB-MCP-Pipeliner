@@ -67,7 +67,7 @@ T_Picture_10_D
 T_Picture_11_D
 T_Picture_12_D
 T_Picture_13_D
-T_Picture_N
+T_Picture_14_D
 ```
 
 Everything else in the template is left untouched.
@@ -90,9 +90,11 @@ Requirements for every generated source image:
 
 The pack must perform 20 total reimports with a unique source image for every texture target. Do not reuse source images between targets.
 
-- `T_Picture_01_D` through `T_Picture_13_D`
+There are 14 numbered picture/painting texture targets per pack: `T_Picture_01_D` through `T_Picture_14_D`.
+`T_Picture_N` exists in the template but must be left untouched.
+
+- `T_Picture_01_D` through `T_Picture_14_D`
 - `T_Photo_01_D` through `T_Photo_06_D`
-- `T_Picture_N`
 
 ## Project Creation
 

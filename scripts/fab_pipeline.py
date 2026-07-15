@@ -37,8 +37,7 @@ PACKAGING_DISABLED_PLUGINS = {
 }
 ALLOWED_TEXTURE_NAMES = {
     *(f"T_Photo_{index:02d}_D" for index in range(1, 7)),
-    *(f"T_Picture_{index:02d}_D" for index in range(1, 14)),
-    "T_Picture_N",
+    *(f"T_Picture_{index:02d}_D" for index in range(1, 15)),
 }
 ALLOWED_SOURCE_SIZES = {(1024, 1024), (2048, 2048)}
 
@@ -180,6 +179,15 @@ def create_project(args: argparse.Namespace) -> None:
         archive.extractall(dest)
 
     old_project_files = list(dest.glob("*.uproject"))
+    if not old_project_files:
+        top_dirs = [path for path in dest.iterdir() if path.is_dir()]
+        if len(top_dirs) == 1 and list(top_dirs[0].glob("*.uproject")):
+            extracted_root = top_dirs[0]
+            temp_root = dest.parent / f"{dest.name}__extract"
+            extracted_root.rename(temp_root)
+            shutil.rmtree(dest)
+            temp_root.rename(dest)
+            old_project_files = list(dest.glob("*.uproject"))
     if not old_project_files:
         raise SystemExit(f"No .uproject found after extracting {template_zip}")
 

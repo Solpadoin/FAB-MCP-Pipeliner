@@ -11,8 +11,7 @@ import unreal
 
 ALLOWED_TEXTURE_NAMES = {
     *(f"T_Photo_{index:02d}_D" for index in range(1, 7)),
-    *(f"T_Picture_{index:02d}_D" for index in range(1, 14)),
-    "T_Picture_N",
+    *(f"T_Picture_{index:02d}_D" for index in range(1, 15)),
 }
 
 
