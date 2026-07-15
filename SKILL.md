@@ -65,15 +65,19 @@ T_Picture_08_D
 T_Picture_09_D
 T_Picture_10_D
 T_Picture_11_D
+T_Picture_12_D
+T_Picture_13_D
 ```
 
 Everything else in the template is left untouched.
 
 ## Generated Source Images
 
-Generate 11 unique full artwork images for each pack. Use AI image generation, not local drawing.
+Generate 13 unique full artwork images for each pack. Use AI image generation, not local drawing.
 
 For speed, generate source images in small bursts when the tool allows it: run 3-4 image generations, then wait about 5 minutes before the next burst. This is faster than fully sequential generation while keeping rate limiting manageable.
+
+Experimental speed target: one pack should avoid unnecessary waiting between independent steps, but never trade correctness for speed. The slow path is usually image generation, not Unreal packaging. Do not replace imagegen cover editing with local masking/compositing to save time; that creates marketplace-rejection risk.
 
 Requirements for every generated source image:
 
@@ -83,9 +87,9 @@ Requirements for every generated source image:
 - Suitable for the current pack theme.
 - Saved as normal image files on disk before reimport.
 
-The pack may perform 17 total reimports by using the 11 unique images across:
+The pack may perform 19 total reimports by using the 13 unique images across:
 
-- `T_Picture_01_D` through `T_Picture_11_D`
+- `T_Picture_01_D` through `T_Picture_13_D`
 - `T_Photo_01_D` through `T_Photo_06_D`
 
 ## Project Creation
@@ -109,6 +113,10 @@ The generated `.uproject` must use:
 ```
 
 Modeling Tools must be disabled for generated projects.
+
+`PythonScriptPlugin` and `EditorScriptingUtilities` are generation-time tools only. They may be enabled while creating/reimporting assets, but they are not runtime requirements for the delivered asset pack and must not remain enabled in the final packaged `.uproject`.
+
+`project_name`, `pack_folder`, the `.uproject` filename stem, and the final zip basename must each be 20 characters or fewer. Use short names such as `RPaintPackVol10` or `HPaintingPackVol5`; do not use long names such as `RandomPaintingsPackVol10` for delivered projects.
 
 ## Unreal Automation
 
@@ -174,7 +182,7 @@ If validation fails, fix the image/config/reimport issue and rerun automation. D
 
 ## Marketplace Cover
 
-Use `DEMOSHOWCASE.png` as the edit target for the cover image. Before calling AI image editing, inspect `DEMOSHOWCASE.png` so it is visible in context.
+Use `DEMOSHOWCASE.png` as the edit target for the cover image. Before calling AI image editing, inspect `DEMOSHOWCASE.png` with `view_image` so it is visible in context. The imagegen request must be an edit of that visible screenshot; do not rely on a path string alone.
 
 Hard cover rules:
 
@@ -182,9 +190,13 @@ Hard cover rules:
 - Preserve the exact number of visible paintings, their positions, their frame shapes, and their artwork contents.
 - Do not add extra paintings, remove paintings, rearrange paintings, replace painting contents, or invent new artwork.
 - Change only the checker/placeholder wall and floor into a themed showcase background.
-- Ask AI to render the final marketplace cover, including the top title and bottom resolution text.
+- Keep the whole 16:9 gallery composition visible. Do not crop out half of the paintings.
+- Do not create local mask/composite covers as a replacement for imagegen. Local scripts may only resize/compress a successful imagegen cover; they must not synthesize or replace the wall/floor.
+- If imagegen for the FAB cover is unavailable or blocked by rate limits, stop the process and report that the cover cannot be generated because imagegen is rate-limited. Do not improvise a local cover, placeholder, procedural background, mask composite, or any other substitute.
+- Do not add title/footer bars that cover, crop, or darken the paintings. If text is needed, ask imagegen for clean marketplace text in empty top/bottom space without obscuring the paintings; otherwise deliver a no-text cover.
 - If the edited cover keeps the placeholder checker wall/floor, reject it and regenerate with a stronger theme/background instruction.
 - If the edited cover contains extra paintings or changed painting content, reject it and regenerate with a stricter prompt.
+- If the edited cover has rectangular overlay blocks, mask artifacts around frames, or corrupted painting areas, reject it.
 
 Use `cover-prompt` to print the standard strict edit prompt:
 
@@ -231,12 +243,23 @@ python scripts\fab_pipeline.py validate-project --config path\to\pack.json
 Validation must confirm:
 
 - UE association is `5.3`.
+- `project_name`, `pack_folder`, the `.uproject` filename stem, and the final zip basename are each 20 characters or fewer.
 - `Content` contains only the current asset-pack folder.
 - `Config` exists.
 - Generated source images used for reimport are square `1024x1024` or `2048x2048`.
 - Reimport targets are only the allowed painting texture assets.
 
 ## Packaging
+
+Before writing the final zip, disable every non-runtime/editor-automation plugin that is not required by the delivered asset pack. For the current pipeline this includes:
+
+- `PythonScriptPlugin`
+- `EditorScriptingUtilities`
+- `ModelingToolsEditorMode`
+- `MeshModelingToolset`
+- `ModelingToolsEditorModeEditorOnly`
+
+The `zip-project` command performs this sanitization automatically on the project's `.uproject` before archiving. If packaging is ever done manually, verify these plugins are not enabled in the `.uproject` included in the final zip.
 
 Create the final zip:
 

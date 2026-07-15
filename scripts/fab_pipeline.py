@@ -26,10 +26,18 @@ TARGET_ENGINE_ASSOCIATION = "5.3"
 TARGET_COVER_SIZE = (1920, 1080)
 DEFAULT_SHOWCASE_SIZE = (3840, 2160)
 MAX_COVER_BYTES = 3 * 1024 * 1024
+MAX_UE_NAME_CHARS = 20
 EXCLUDED_ARCHIVE_DIRS = {".vs", "Binaries", "DerivedDataCache", "Intermediate", "Saved"}
+PACKAGING_DISABLED_PLUGINS = {
+    "PythonScriptPlugin",
+    "EditorScriptingUtilities",
+    "ModelingToolsEditorMode",
+    "MeshModelingToolset",
+    "ModelingToolsEditorModeEditorOnly",
+}
 ALLOWED_TEXTURE_NAMES = {
     *(f"T_Photo_{index:02d}_D" for index in range(1, 7)),
-    *(f"T_Picture_{index:02d}_D" for index in range(1, 12)),
+    *(f"T_Picture_{index:02d}_D" for index in range(1, 14)),
 }
 ALLOWED_SOURCE_SIZES = {(1024, 1024), (2048, 2048)}
 
@@ -51,6 +59,28 @@ def resolve_repo_path(value: str | os.PathLike[str]) -> Path:
 def project_root(config: dict) -> Path:
     root = Path(config.get("projects_root") or DEFAULT_PROJECTS_ROOT)
     return root / config["project_name"]
+
+
+def validate_ue_name_lengths(config: dict) -> None:
+    checks = {
+        "project_name": config["project_name"],
+        "pack_folder": config["pack_folder"],
+        "uproject_stem": f"{config['project_name']}",
+    }
+    too_long = {field: value for field, value in checks.items() if len(value) > MAX_UE_NAME_CHARS}
+    if too_long:
+        details = ", ".join(
+            f"{field}={value!r} ({len(value)} chars)" for field, value in sorted(too_long.items())
+        )
+        raise SystemExit(f"UE/FAB names must be {MAX_UE_NAME_CHARS} characters or fewer: {details}")
+
+
+def validate_output_name_length(output: Path) -> None:
+    if len(output.stem) > MAX_UE_NAME_CHARS:
+        raise SystemExit(
+            f"Output zip basename must be {MAX_UE_NAME_CHARS} characters or fewer: "
+            f"{output.stem!r} ({len(output.stem)} chars)"
+        )
 
 
 def ensure_clean_destination(path: Path, force: bool) -> None:
@@ -88,6 +118,16 @@ def set_project_plugins(project_data: dict) -> None:
     project_data["Plugins"] = sorted(existing.values(), key=lambda item: item["Name"])
 
 
+def disable_packaging_plugins(project_data: dict) -> list[str]:
+    disabled: list[str] = []
+    for plugin in project_data.get("Plugins", []):
+        name = plugin.get("Name")
+        if name in PACKAGING_DISABLED_PLUGINS and plugin.get("Enabled") is not False:
+            plugin["Enabled"] = False
+            disabled.append(name)
+    return disabled
+
+
 def validate_texture_reimports(config: dict) -> None:
     reimports = config.get("texture_reimports", [])
     if not reimports:
@@ -113,6 +153,7 @@ def validate_texture_reimports(config: dict) -> None:
 
 def create_project(args: argparse.Namespace) -> None:
     config = load_config(args.config)
+    validate_ue_name_lengths(config)
     template_zip = resolve_repo_path(config["template_zip"])
     dest = project_root(config)
     ensure_clean_destination(dest, args.force)
@@ -270,6 +311,7 @@ def cover_prompt(args: argparse.Namespace) -> None:
 
 def ue_command(args: argparse.Namespace) -> None:
     config = load_config(args.config)
+    validate_ue_name_lengths(config)
     validate_texture_reimports(config)
     ue_root = Path(config.get("ue_root") or DEFAULT_UE_ROOT)
     editor_cmd = ue_root / "Engine" / "Binaries" / "Win64" / "UnrealEditor-Cmd.exe"
@@ -291,6 +333,7 @@ def ue_command(args: argparse.Namespace) -> None:
 
 def screenshot_command(args: argparse.Namespace) -> None:
     config = load_config(args.config)
+    validate_ue_name_lengths(config)
     ue_root = Path(config.get("ue_root") or DEFAULT_UE_ROOT)
     editor = ue_root / "Engine" / "Binaries" / "Win64" / "UnrealEditor.exe"
     project_file = project_root(config) / f"{config['project_name']}.uproject"
@@ -320,6 +363,7 @@ def screenshot_command(args: argparse.Namespace) -> None:
 
 def capture_showcase(args: argparse.Namespace) -> None:
     config = load_config(args.config)
+    validate_ue_name_lengths(config)
     ue_root = Path(config.get("ue_root") or DEFAULT_UE_ROOT)
     editor = ue_root / "Engine" / "Binaries" / "Win64" / "UnrealEditor.exe"
     root = project_root(config)
@@ -379,6 +423,7 @@ def capture_showcase(args: argparse.Namespace) -> None:
 
 def validate_project(args: argparse.Namespace) -> None:
     config = load_config(args.config)
+    validate_ue_name_lengths(config)
     validate_texture_reimports(config)
     root = project_root(config)
     project_file = root / f"{config['project_name']}.uproject"
@@ -412,14 +457,22 @@ def should_archive(path: Path, project: Path) -> bool:
 
 def zip_project(args: argparse.Namespace) -> None:
     config = load_config(args.config)
+    validate_ue_name_lengths(config)
     root = project_root(config)
     output = Path(args.output)
+    validate_output_name_length(output)
     output.parent.mkdir(parents=True, exist_ok=True)
 
     include_roots = ["Content", "Config", "Plugins"]
     project_file = root / f"{config['project_name']}.uproject"
     if not project_file.exists():
         raise SystemExit(f"Missing project file: {project_file}")
+
+    project_data = read_json(project_file)
+    disabled_plugins = disable_packaging_plugins(project_data)
+    if disabled_plugins:
+        write_json(project_file, project_data)
+        print("Disabled non-runtime plugins before packaging: {0}".format(", ".join(sorted(disabled_plugins))))
 
     with zipfile.ZipFile(output, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=6) as archive:
         archive.write(project_file, project_file.name)
